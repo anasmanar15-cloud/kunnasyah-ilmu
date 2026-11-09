@@ -39,7 +39,7 @@
     "Dan katakanlah: Wahai Tuhanku, tambahkanlah ilmuku.": "And say: My Lord, increase me in knowledge.", "Bahasa": "Language",
     "Untuk jualan": "For sale", "Beli e-buku": "Buy e-book", "Beli": "Buy", "Harga": "Price", "Harga dan pautan pembelian akan diumumkan.": "Price and purchase link will be announced soon.",
     "Pembayaran melalui toyyibPay. E-buku dihantar selepas pembayaran disahkan.": "Payment via toyyibPay. The e-book is sent once payment is confirmed.",
-    "Pratonton": "Preview", "Kongsi": "Share", "Salin pautan": "Copy link", "Pautan disalin": "Link copied",
+    "Pratonton": "Preview", "Pelawat hari ini": "Visitors today", "Jumlah pelawat": "Total visitors", "Kongsi": "Share", "Salin pautan": "Copy link", "Pautan disalin": "Link copied",
     "Pautan disalin. Tampal dalam Instagram (Story, bio atau mesej).": "Link copied. Paste it into Instagram (Story, bio or message).",
     "Pautan dipilih. Tekan Ctrl+C atau Salin untuk menyalin.": "Link selected. Press Ctrl+C or Copy to copy it.", "Kongsi ke": "Share to", "halaman pertama": "first pages", "Dapatkan naskhah penuh": "Get the full copy"
   };
@@ -70,6 +70,32 @@
       };
       try { navigator.clipboard.writeText(text).then(ok, fallback); } catch (e) { fallback(); }
     });
+  }
+  /* Daily visitor counter (GoatCounter). Runs only on the public site, never inside claude.ai. */
+  var VS = null;
+  function counterOn() { return !!D.site.goatcounter && !/claude(usercontent)?\.(ai|com)$/.test(location.hostname) && location.protocol.indexOf("http") === 0; }
+  function statsHtml() {
+    if (!counterOn()) return "";
+    return '<span class="visit-stats" id="visit-stats"' + (VS ? "" : " hidden") + ">" + (VS ? statsText() : "") + "</span>";
+  }
+  function statsText() {
+    return T("Pelawat hari ini") + ": <b>" + esc(VS.today) + "</b>" + (VS.total ? " · " + T("Jumlah pelawat") + ": <b>" + esc(VS.total) + "</b>" : "");
+  }
+  function counterInit() {
+    if (!counterOn()) return;
+    var code = String(D.site.goatcounter).replace(/[^a-z0-9-]/gi, "");
+    var sc = document.createElement("script");
+    sc.async = true; sc.src = "https://gc.zgo.at/count.js";
+    sc.setAttribute("data-goatcounter", "https://" + code + ".goatcounter.com/count");
+    document.head.appendChild(sc);
+    var day = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kuala_Lumpur", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+    var base = "https://" + code + ".goatcounter.com/counter/TOTAL.json";
+    var get = function (u) { return fetch(u).then(function (r) { if (!r.ok) throw r.status; return r.json(); }).then(function (j) { return String(j.count || "0").replace(/\u202f|\u00a0/g, " "); }); };
+    Promise.all([get(base + "?start=" + day), get(base).catch(function () { return ""; })]).then(function (v) {
+      VS = { today: v[0], total: v[1] };
+      var el = document.getElementById("visit-stats");
+      if (el) { el.innerHTML = statsText(); el.hidden = false; }
+    }).catch(function () {});
   }
   function priceTag(t) { return t.jualan ? T("Untuk jualan") + (t.harga ? " · RM" + t.harga : "") : ""; }
   function buyBox(t, cls) {
@@ -148,7 +174,7 @@
       '<div><h4>' + T("Laman") + '</h4><ul>' + links.map(function (l) { return '<li><a href="#' + l[0] + '">' + T(l[1]) + "</a></li>"; }).join("") + "</ul></div>" +
       "<div><h4>" + T("Siri") + "</h4><ul>" + siriFoot + "</ul></div>" +
       "<div><h4>" + T("Hubungi") + "</h4>" + (D.site.emel ? '<p class="sel">' + esc(D.site.emel) + "</p>" : "<p>" + T("Butiran hubungan di halaman Profil.") + "</p>") + '<p><a href="#profil">' + T("Profil penulis") + "</a></p></div></div>" +
-      '<div class="wrap foot-base"><span>© ' + new Date().getFullYear() + " " + esc(D.site.namaLaman || D.site.nama) + "</span><span>" + T("Hak cipta setiap tulisan milik penulisnya.") + "</span></div></footer>";
+      '<div class="wrap foot-base"><span>© ' + new Date().getFullYear() + " " + esc(D.site.namaLaman || D.site.nama) + "</span>" + statsHtml() + "<span>" + T("Hak cipta setiap tulisan milik penulisnya.") + "</span></div></footer>";
   }
 
   function viewHome() {
@@ -727,6 +753,7 @@
   window.addEventListener("hashchange", function () { delArmed = ""; render(); window.scrollTo(0, 0); });
 
   render();
+  counterInit();
 
   (async function () {
     try {

@@ -382,3 +382,5 @@ a.flip-btn { text-decoration: none; display: inline-block; }
 .art-head .crumbs, .art-head .head-meta { color: #3c5236; }
 .art-head .crumbs a { color: #14213d; }
 .art-head .crumbs a:hover { color: #2f6b2a; }
+.visit-stats { font-variant-numeric: tabular-nums; }
+.visit-stats b { color: var(--semi); font-weight: 700; }
